@@ -1,0 +1,87 @@
+name: AGW Build, Format & Test Bazel
+on:
+  # yamllint disable-line rule:truthy
+  workflow_dispatch:
+    inputs:
+      publish_bazel_profile:
+        description: 'Publish bazel profile data (default: false)'
+        required: false
+        default: false
+        type: boolean
+  workflow_call:
+    outputs:
+      artifacts:
+        value: ${{ jobs.bazel_package.outputs.artifacts }}
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+    branches:
+      - 'release/*'
+permissions:
+  contents: write 
+env:
+  BAZEL_BASE_IMAGE: "ghcr.io/magma/magma/bazel-base:latest"
+  # Warning: the values of BAZEL_CACHE_PLAIN_IMAGE and BAZEL_CACHE_PROD_IMAGE
+  # need to be repeated in the matrix workflow includes for "docker-image-cache".
+  BAZEL_CACHE_PLAIN_IMAGE: "ghcr.io/magma/magma/bazel-cache-plain:latest"
+  BAZEL_CACHE_PROD_IMAGE: "ghcr.io/magma/magma/bazel-cache-prod:latest"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  bazel_package:
+    name: Bazel Package Job
+    runs-on: ubuntu-20.04
+    permissions:
+      contents: write
+    steps:
+      - name: Check Out Repo
+        # This is necessary for overlays into the Docker container below.
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # pin@v3.1.0
+     
+      - name: Initialize Git LFS
+        run: |
+          # Configure Git user info
+          git config --global user.email "mohin.my@gmail.com"
+          git config --global user.name "mohin987"
+          echo "hello" >> sample.txt      
+          git lfs install
+          #git lfs install --skip-repo
+          git lfs track "*.txt"
+          #echo "Bazel_build_package_profile" >> .gitignore 
+          #echo "semicolon_delimited_script" >> .gitignore
+          #echo "sentry_services" >> .gitignore
+          git add .gitattributes
+          #git add .gitignore
+      - name: Add and Commit Packages to Git
+        run: |
+          git add .
+          git status
+          git commit -m "Add built .deb packages" || echo "No changes to commit"
+
+      - name: Push Changes to Repository
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        run: |
+           git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} 
+        
+
+       # run: |
+        #  git config --global user.email "mohin.my@gmail.com"
+        #  git config --global user.name "mohin987"
+        #  git lfs install
+        #  git lfs track "*.deb"
+        #  git add .gitattributes
+        #  git add packages/*
+        #  git commit -m "Add built .deb packages" || echo "No changes to commit"
+        #  git push https://x-access-token:${{ secrets.ACCESS_TOKEN }}@github.com/${{ github.repository }} HEAD:main || echo "First push attempt failed"
+        #  git remote add sample https://x-access-token:${{ secrets.ACCESS_TOKEN }}@github.com/mohin987/sample.git 
+        #  git push -v -u --force sample main
+        #env:
+        #  ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+     
+    
