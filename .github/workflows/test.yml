@@ -48,10 +48,13 @@ jobs:
           # Configure Git user info
           git config --global user.email "mohin.my@gmail.com"
           git config --global user.name "mohin987"
-          echo "hello" >> sample.txt      
+          echo "hello" >> sample.txt
+          ls -l
+          mkdir output
+          mv sample.txt output
           git lfs install
           #git lfs install --skip-repo
-          git lfs track "*.txt"
+          git lfs track "output/*.txt"
           #echo "Bazel_build_package_profile" >> .gitignore 
           #echo "semicolon_delimited_script" >> .gitignore
           #echo "sentry_services" >> .gitignore
